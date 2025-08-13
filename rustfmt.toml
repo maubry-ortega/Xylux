@@ -1,0 +1,24 @@
+# Configuración de rustfmt para Xylux IDE
+# Optimizada para legibilidad, rendimiento y consistencia con la filosofía de Xylux
+
+brace_style = "PreferSameLine"  # Mantiene bloques compactos, consistente con Alux ({})
+condense_wildcard_suffixes = true  # Simplifica patrones en match, común en ECS
+fn_params_layout = "Tall"  # CAMBIO: Usa formato vertical para funciones con muchos parámetros (mejor legibilidad en APIs de Xylux)
+fn_single_line = false  # CAMBIO: Evita forzar funciones en una sola línea para mejorar claridad en lógica compleja
+format_code_in_doc_comments = false  # CAMBIO: Desactiva formateo en doc comments para soportar snippets de Alux sin errores
+format_macro_matchers = true  # Formatea macros (útil para bindings Rust-Alux)
+format_strings = true  # Mantiene strings legibles, importante para mensajes de error
+group_imports = "StdExternalCrate"  # Organiza imports para claridad en dependencias del motor
+inline_attribute_width = 50  # Limita atributos para mantener código limpio
+match_arm_blocks = false  # Evita bloques innecesarios en match, mejora compacidad
+normalize_comments = true  # Estandariza comentarios para documentación clara
+normalize_doc_attributes = true  # Consistencia en atributos de documentación
+overflow_delimited_expr = true  # Maneja expresiones largas (e.g., listas de componentes ECS)
+reorder_impl_items = true  # Ordena impls para facilitar mantenimiento
+style_edition = "2024"  # Usa estándares modernos de Rust, alineado con toolchain >= 1.80
+use_field_init_shorthand = true  # Simplifica inicialización de structs, común en ECS
+use_small_heuristics = "Max"  # Aplica todas las heurísticas para un formateo robusto
+use_try_shorthand = true  # Simplifica expresiones try, útil en manejo de errores
+type_punctuation_density = "Compressed"  # Reduce puntuación en tipos para APIs limpias
+where_single_line = false  # CAMBIO: Evita cláusulas where en una línea para mejorar legibilidad en sistemas complejos
+wrap_comments = true  # Divide comentarios largos para documentación clara

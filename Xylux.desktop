@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Xylux IDE
+GenericName=Game Development IDE
+GenericName[es]=Entorno de Desarrollo para Juegos
+GenericName[fr]=Environnement de Développement pour Jeux
+Comment=A lightweight IDE for game development with Xylux and Alux
+Comment[es]=Un IDE ligero para desarrollo de juegos con Xylux y Alux
+Comment[fr]=Un IDE léger pour le développement de jeux avec Xylux et Alux
+Exec=xylux-ide %f
+Icon=xylux-ide
+Type=Application
+Terminal=false
+Categories=Development;IDE;GameDevelopment;
+MimeType=text/plain;application/x-xylux-project;application/x-alux-script;
+Keywords=game;development;rust;alux;xylux;ide;
