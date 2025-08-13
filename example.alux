@@ -1,0 +1,385 @@
+-- Example Alux Script for Xylux IDE
+-- This file demonstrates various Alux language features that the specialized tools can analyze
+
+-- Module declaration
+module GameLogic
+
+-- Import statements
+import core.math
+import core.string
+import core.collections
+import engine.entity
+import engine.physics
+import engine.renderer
+
+-- Global constants
+const MAX_HEALTH = 100.0
+const GRAVITY = -9.81
+const PLAYER_SPEED = 5.0
+
+-- Type definitions
+type Vector3 = {
+    x: float,
+    y: float,
+    z: float
+}
+
+type Entity = {
+    id: int,
+    name: string,
+    position: Vector3,
+    velocity: Vector3,
+    health: float,
+    active: bool,
+    components: [Component]
+}
+
+type Component = {
+    type_name: string,
+    data: any
+}
+
+-- Global variables
+var player_entity: Entity? = nil
+var entities: [Entity] = []
+var game_time: float = 0.0
+var is_paused: bool = false
+
+-- Function definitions
+function create_vector3(x: float, y: float, z: float) -> Vector3 {
+    return Vector3 {
+        x = x,
+        y = y,
+        z = z
+    }
+}
+
+function vector3_add(a: Vector3, b: Vector3) -> Vector3 {
+    return Vector3 {
+        x = a.x + b.x,
+        y = a.y + b.y,
+        z = a.z + b.z
+    }
+}
+
+function vector3_multiply(v: Vector3, scalar: float) -> Vector3 {
+    return Vector3 {
+        x = v.x * scalar,
+        y = v.y * scalar,
+        z = v.z * scalar
+    }
+}
+
+function distance(a: Vector3, b: Vector3) -> float {
+    let dx = a.x - b.x
+    let dy = a.y - b.y
+    let dz = a.z - b.z
+    return math.sqrt(dx * dx + dy * dy + dz * dz)
+}
+
+function normalize_vector3(v: Vector3) -> Vector3 {
+    let magnitude = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+    if magnitude > 0.0 {
+        return Vector3 {
+            x = v.x / magnitude,
+            y = v.y / magnitude,
+            z = v.z / magnitude
+        }
+    } else {
+        return create_vector3(0.0, 0.0, 0.0)
+    }
+}
+
+-- Entity management functions
+function create_entity(name: string, pos: Vector3) -> Entity {
+    let new_id = entities.length + 1
+    return Entity {
+        id = new_id,
+        name = name,
+        position = pos,
+        velocity = create_vector3(0.0, 0.0, 0.0),
+        health = MAX_HEALTH,
+        active = true,
+        components = []
+    }
+}
+
+function add_entity(entity: Entity) -> void {
+    entities.push(entity)
+    log_info("Added entity: " + entity.name + " with ID: " + string.from_int(entity.id))
+}
+
+function remove_entity(id: int) -> bool {
+    for i in range(entities.length) {
+        if entities[i].id == id {
+            entities.remove(i)
+            log_info("Removed entity with ID: " + string.from_int(id))
+            return true
+        }
+    }
+    return false
+}
+
+function find_entity(id: int) -> Entity? {
+    for entity in entities {
+        if entity.id == id {
+            return entity
+        }
+    }
+    return nil
+}
+
+function find_entity_by_name(name: string) -> Entity? {
+    for entity in entities {
+        if entity.name == name {
+            return entity
+        }
+    }
+    return nil
+}
+
+-- Component system
+function add_component(entity: Entity, component: Component) -> void {
+    entity.components.push(component)
+}
+
+function get_component(entity: Entity, type_name: string) -> Component? {
+    for component in entity.components {
+        if component.type_name == type_name {
+            return component
+        }
+    }
+    return nil
+}
+
+function has_component(entity: Entity, type_name: string) -> bool {
+    return get_component(entity, type_name) != nil
+}
+
+-- Physics functions
+function apply_gravity(entity: Entity, delta_time: float) -> void {
+    if entity.active {
+        entity.velocity.y += GRAVITY * delta_time
+    }
+}
+
+function update_position(entity: Entity, delta_time: float) -> void {
+    if entity.active {
+        entity.position = vector3_add(
+            entity.position,
+            vector3_multiply(entity.velocity, delta_time)
+        )
+    }
+}
+
+function check_collision(a: Entity, b: Entity) -> bool {
+    let dist = distance(a.position, b.position)
+    return dist < 2.0  -- Simple collision radius
+}
+
+-- Game logic functions
+function update_entity(entity: Entity, delta_time: float) -> void {
+    if not entity.active {
+        return
+    }
+
+    -- Apply physics
+    apply_gravity(entity, delta_time)
+    update_position(entity, delta_time)
+
+    -- Health regeneration
+    if entity.health < MAX_HEALTH {
+        entity.health = math.min(entity.health + delta_time * 5.0, MAX_HEALTH)
+    }
+
+    -- Check bounds
+    if entity.position.y < -100.0 {
+        entity.health = 0.0
+        entity.active = false
+        log_warning("Entity " + entity.name + " fell out of bounds!")
+    }
+}
+
+function update_all_entities(delta_time: float) -> void {
+    if is_paused {
+        return
+    }
+
+    for entity in entities {
+        update_entity(entity, delta_time)
+    }
+
+    -- Check collisions
+    for i in range(entities.length) {
+        for j in range(i + 1, entities.length) {
+            if entities[i].active and entities[j].active {
+                if check_collision(entities[i], entities[j]) {
+                    handle_collision(entities[i], entities[j])
+                }
+            }
+        }
+    }
+}
+
+function handle_collision(a: Entity, b: Entity) -> void {
+    log_info("Collision between " + a.name + " and " + b.name)
+
+    -- Simple damage system
+    a.health -= 10.0
+    b.health -= 10.0
+
+    if a.health <= 0.0 {
+        a.active = false
+    }
+    if b.health <= 0.0 {
+        b.active = false
+    }
+}
+
+-- Player control functions
+function move_player(direction: Vector3, delta_time: float) -> void {
+    if player_entity != nil and player_entity.active {
+        let movement = vector3_multiply(
+            normalize_vector3(direction),
+            PLAYER_SPEED * delta_time
+        )
+        player_entity.position = vector3_add(player_entity.position, movement)
+    }
+}
+
+function jump_player(force: float) -> void {
+    if player_entity != nil and player_entity.active {
+        if player_entity.position.y <= 0.1 {  -- On ground check
+            player_entity.velocity.y = force
+        }
+    }
+}
+
+-- Game state management
+function initialize_game() -> void {
+    log_info("Initializing game...")
+
+    -- Create player
+    let player = create_entity("Player", create_vector3(0.0, 0.0, 0.0))
+    add_entity(player)
+    player_entity = player
+
+    -- Create some NPCs
+    add_entity(create_entity("Enemy1", create_vector3(10.0, 0.0, 5.0)))
+    add_entity(create_entity("Enemy2", create_vector3(-5.0, 0.0, 10.0)))
+    add_entity(create_entity("Powerup", create_vector3(0.0, 5.0, 15.0)))
+
+    game_time = 0.0
+    is_paused = false
+
+    log_info("Game initialized with " + string.from_int(entities.length) + " entities")
+}
+
+function update_game(delta_time: float) -> void {
+    if not is_paused {
+        game_time += delta_time
+        update_all_entities(delta_time)
+    }
+}
+
+function pause_game() -> void {
+    is_paused = true
+    log_info("Game paused")
+}
+
+function resume_game() -> void {
+    is_paused = false
+    log_info("Game resumed")
+}
+
+function get_active_entity_count() -> int {
+    var count = 0
+    for entity in entities {
+        if entity.active {
+            count += 1
+        }
+    }
+    return count
+}
+
+-- Utility functions
+function log_info(message: string) -> void {
+    print("[INFO] " + message)
+}
+
+function log_warning(message: string) -> void {
+    print("[WARNING] " + message)
+}
+
+function log_error(message: string) -> void {
+    print("[ERROR] " + message)
+}
+
+-- Event handlers
+function on_key_pressed(key: string) -> void {
+    match key {
+        "W" | "w" => move_player(create_vector3(0.0, 0.0, 1.0), 0.016),
+        "S" | "s" => move_player(create_vector3(0.0, 0.0, -1.0), 0.016),
+        "A" | "a" => move_player(create_vector3(-1.0, 0.0, 0.0), 0.016),
+        "D" | "d" => move_player(create_vector3(1.0, 0.0, 0.0), 0.016),
+        "Space" => jump_player(10.0),
+        "P" | "p" => {
+            if is_paused {
+                resume_game()
+            } else {
+                pause_game()
+            }
+        },
+        _ => log_info("Unknown key pressed: " + key)
+    }
+}
+
+function on_entity_spawned(entity: Entity) -> void {
+    log_info("Entity spawned: " + entity.name)
+}
+
+function on_entity_destroyed(entity: Entity) -> void {
+    log_info("Entity destroyed: " + entity.name)
+}
+
+-- Main game loop
+function main() -> void {
+    log_info("Starting Alux game example...")
+
+    initialize_game()
+
+    -- Simulate game loop
+    for frame in range(1000) {
+        let delta_time = 0.016  -- 60 FPS
+        update_game(delta_time)
+
+        -- Log status every 60 frames (1 second)
+        if frame % 60 == 0 {
+            log_info("Frame " + string.from_int(frame) +
+                    ", Active entities: " + string.from_int(get_active_entity_count()) +
+                    ", Game time: " + string.from_float(game_time))
+        }
+
+        -- Exit condition
+        if get_active_entity_count() <= 1 {
+            log_info("Game over! Only one entity remaining.")
+            break
+        }
+    }
+
+    log_info("Game example completed!")
+}
+
+-- Export public interface
+export {
+    Vector3,
+    Entity,
+    Component,
+    create_entity,
+    add_entity,
+    remove_entity,
+    find_entity,
+    update_game,
+    initialize_game,
+    main
+}

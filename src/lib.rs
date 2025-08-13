@@ -61,6 +61,7 @@ mod ide;
 // Feature modules
 pub mod build;
 pub mod editor;
+pub mod gui;
 pub mod platform;
 pub mod project;
 pub mod syntax;

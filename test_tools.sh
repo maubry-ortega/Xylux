@@ -1,0 +1,22 @@
+#!/bin/bash
+echo '🔧 Testing Xylux IDE Specialized Tools Integration'
+echo '=================================================='
+echo ''
+echo '1. Building project...'
+cargo build --release
+echo ''
+echo '2. Project structure:'
+find . -name '*.rs' -o -name '*.alux' | head -10
+echo ''
+echo '3. Key files created:'
+echo '   - src/gui/tools.rs (Specialized tools implementation)'
+echo '   - example.rs (Rust example file)'
+echo '   - example.alux (Alux example file)'
+echo ''
+echo '4. To test:'
+echo '   a) Run: ./target/release/xylux-ide'
+echo '   b) Go to Tools -> 🔧 Specialized Tools'
+echo '   c) Open example.rs or example.alux'
+echo '   d) See tools update automatically'
+echo ''
+echo '✅ Integration test ready!'

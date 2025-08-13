@@ -1,0 +1,22 @@
+fffffffffffffHello World!
+
+This is a test file for the Xylux IDE editor.
+
+You can:
+- Edit this text
+- Use arrow keys to move around
+- Press Ctrl+S to save
+- Press Ctrl+Q to quit
+
+This editor supports:
+✓ Basic text editing
+✓ Cursor movement
+✓ File saving
+✓ Multiple lines
+✓ Backspace and Delete
+✓ Enter for new lines
+
+Test some editing here:
+
+
+End of test file.

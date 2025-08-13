@@ -53,8 +53,9 @@ impl XyluxIde {
         let current_project = Arc::new(RwLock::new(None));
 
         // Initialize managers
-        let ui_manager =
-            Arc::new(RwLock::new(UiManager::new(config.clone(), event_bus.clone()).await?));
+        let ui_manager = Arc::new(RwLock::new(
+            UiManager::new(config.clone(), event_bus.clone(), shutdown_requested.clone()).await?,
+        ));
         let editor = Arc::new(Editor::new(config.clone(), event_bus.clone()).await?);
         let project_manager = Arc::new(ProjectManager::new(config.clone(), event_bus.clone()));
         let syntax_manager = Arc::new(SyntaxManager::new(config.clone(), event_bus.clone()).await?);

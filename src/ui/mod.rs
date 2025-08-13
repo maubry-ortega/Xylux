@@ -33,11 +33,17 @@ pub struct UiManager {
     layout: Layout,
     /// Whether the UI is running.
     running: Arc<RwLock<bool>>,
+    /// Shutdown flag from IDE.
+    shutdown_flag: Arc<RwLock<bool>>,
 }
 
 impl UiManager {
     /// Create a new UI manager.
-    pub async fn new(config: Arc<RwLock<Config>>, event_bus: Arc<EventBus>) -> Result<Self> {
+    pub async fn new(
+        config: Arc<RwLock<Config>>,
+        event_bus: Arc<EventBus>,
+        shutdown_flag: Arc<RwLock<bool>>,
+    ) -> Result<Self> {
         debug!("Initializing UI manager");
 
         let theme = {
@@ -48,14 +54,63 @@ impl UiManager {
         let terminal = TerminalInterface::new()?;
         let layout = Layout::new();
 
-        Ok(Self {
+        let mut ui_manager = Self {
             config,
             event_bus,
             terminal,
             theme,
             layout,
             running: Arc::new(RwLock::new(false)),
-        })
+            shutdown_flag,
+        };
+
+        // Initialize basic IDE layout
+        ui_manager.setup_basic_ide_layout().await?;
+
+        Ok(ui_manager)
+    }
+
+    /// Setup a basic IDE layout with main components.
+    async fn setup_basic_ide_layout(&mut self) -> Result<()> {
+        use crate::ui::components::{Container, LayoutType, TextComponent};
+
+        // Create main container with vertical layout
+        let mut main_container = Container::new(LayoutType::Vertical);
+
+        // Add header
+        let header = TextComponent::new("Xylux IDE v0.1.0".to_string())
+            .with_background("#2d3748".to_string())
+            .with_color("#e2e8f0".to_string());
+        main_container.add_child(Box::new(header));
+
+        // Add main content area (horizontal split)
+        let mut content_container = Container::new(LayoutType::Horizontal);
+
+        // File explorer (left panel - 1/4 width)
+        let file_explorer = TextComponent::new("File Explorer\n\n(Coming soon...)".to_string())
+            .with_background("#1a202c".to_string())
+            .with_color("#cbd5e0".to_string());
+        content_container.add_child(Box::new(file_explorer));
+
+        // Editor area (right panel - 3/4 width)
+        let editor_text = TextComponent::new(
+            "Welcome to Xylux IDE\n\nPress Ctrl+O to open a file\nPress Ctrl+N for new file\nPress Ctrl+Q to quit".to_string()
+        ).with_background("#2d3748".to_string())
+         .with_color("#e2e8f0".to_string());
+        content_container.add_child(Box::new(editor_text));
+
+        main_container.add_child(Box::new(content_container));
+
+        // Add status bar
+        let status_bar = TextComponent::new("Ready | Ctrl+Q: Quit".to_string())
+            .with_background("#4a5568".to_string())
+            .with_color("#e2e8f0".to_string());
+        main_container.add_child(Box::new(status_bar));
+
+        // Set as root component
+        self.layout.set_root(Box::new(main_container));
+
+        Ok(())
     }
 
     /// Run the main UI loop.
@@ -99,9 +154,24 @@ impl UiManager {
                 }
             }
 
+            // Check if shutdown was requested
+            {
+                let shutdown = self.shutdown_flag.read().await;
+                if *shutdown {
+                    let mut running = self.running.write().await;
+                    *running = false;
+                    break;
+                }
+            }
+
             // Handle terminal events
             if let Some(event) = self.terminal.poll_event()? {
                 self.handle_terminal_event(event).await?;
+            }
+
+            // Update components
+            if let Some(root) = self.layout.root_mut() {
+                root.update()?;
             }
 
             // Render the UI
@@ -121,8 +191,10 @@ impl UiManager {
         match event {
             Event::Key(KeyEvent { code, modifiers, .. }) => {
                 match (code, modifiers) {
-                    (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-                        // Ctrl+C - request shutdown
+                    (KeyCode::Char('c'), KeyModifiers::CONTROL)
+                    | (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
+                        // Ctrl+C or Ctrl+Q - request shutdown
+                        info!("Shutdown requested via keyboard shortcut");
                         let shutdown_event = crate::core::EventMessage::from_event(
                             crate::core::Event::System(crate::core::SystemEvent::ShutdownRequested),
                         )
@@ -131,15 +203,15 @@ impl UiManager {
 
                         self.event_bus.publish(shutdown_event).await?;
                     }
-                    (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
-                        // Ctrl+Q - request shutdown
-                        let shutdown_event = crate::core::EventMessage::from_event(
-                            crate::core::Event::System(crate::core::SystemEvent::ShutdownRequested),
-                        )
-                        .with_priority(crate::core::EventPriority::Critical)
-                        .with_source("ui");
-
-                        self.event_bus.publish(shutdown_event).await?;
+                    (KeyCode::Char('o'), KeyModifiers::CONTROL) => {
+                        // Ctrl+O - Open file (placeholder)
+                        info!("Open file requested");
+                        // TODO: Implement file open dialog
+                    }
+                    (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                        // Ctrl+N - New file (placeholder)
+                        info!("New file requested");
+                        // TODO: Implement new file creation
                     }
                     _ => {
                         // Handle other key events
@@ -197,21 +269,76 @@ impl UiManager {
             let area = components::Rect { x: 0, y: 0, width, height };
             root.render(area)?;
         } else {
-            // Fallback: render welcome screen
-            let welcome_text = "Xylux IDE - Press Ctrl+C or Ctrl+Q to exit";
-            let x = (width.saturating_sub(welcome_text.len() as u16)) / 2;
-            let y = height / 2;
-
-            self.terminal.print_at(
-                x,
-                y,
-                welcome_text,
-                &self.theme.foreground,
-                &self.theme.background,
-            )?;
+            // Render a basic IDE layout
+            self.render_basic_ide_layout(width, height)?;
         }
 
         self.terminal.flush()?;
+        Ok(())
+    }
+
+    /// Render a basic IDE layout when no root component is set.
+    fn render_basic_ide_layout(&mut self, width: u16, height: u16) -> Result<()> {
+        // Header bar
+        let header_text = "Xylux IDE v0.1.0";
+        self.terminal.print_at(
+            0,
+            0,
+            &format!("{:width$}", header_text, width = width as usize),
+            &self.theme.foreground,
+            &self.theme.background,
+        )?;
+
+        // Status line
+        let status_text = "Ready | Ctrl+Q: Quit | Ctrl+O: Open File | Ctrl+N: New File";
+        let status_y = height.saturating_sub(1);
+        self.terminal.print_at(
+            0,
+            status_y,
+            &format!("{:width$}", status_text, width = width as usize),
+            &self.theme.foreground,
+            &self.theme.background,
+        )?;
+
+        // Main editor area
+        let editor_start_y = 1;
+        let editor_height = height.saturating_sub(2);
+
+        // Show welcome message in editor area
+        if editor_height > 0 {
+            let welcome_lines = vec![
+                "Welcome to Xylux IDE",
+                "",
+                "Getting Started:",
+                "• Press Ctrl+O to open a file",
+                "• Press Ctrl+N to create a new file",
+                "• Press Ctrl+Q to quit",
+                "",
+                "Features:",
+                "• Rust development with rust-analyzer",
+                "• Alux scripting support",
+                "• Xylux engine integration",
+                "• Project management",
+            ];
+
+            let start_line =
+                editor_start_y + (editor_height / 2).saturating_sub(welcome_lines.len() as u16 / 2);
+
+            for (i, line) in welcome_lines.iter().enumerate() {
+                let y = start_line + i as u16;
+                if y < height.saturating_sub(1) {
+                    let x = (width.saturating_sub(line.len() as u16)) / 2;
+                    self.terminal.print_at(
+                        x,
+                        y,
+                        line,
+                        &self.theme.foreground,
+                        &self.theme.background,
+                    )?;
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -278,7 +405,8 @@ mod tests {
         let config = Arc::new(RwLock::new(Config::default()));
         let event_bus = Arc::new(EventBus::new());
 
-        let ui_manager = UiManager::new(config, event_bus).await;
+        let shutdown_flag = Arc::new(RwLock::new(false));
+        let ui_manager = UiManager::new(config, event_bus, shutdown_flag).await;
         assert!(ui_manager.is_ok());
     }
 
@@ -286,9 +414,12 @@ mod tests {
     async fn test_shutdown_request() {
         let config = Arc::new(RwLock::new(Config::default()));
         let event_bus = Arc::new(EventBus::new());
-        let ui_manager = UiManager::new(config, event_bus).await.unwrap();
+        let shutdown_flag = Arc::new(RwLock::new(false));
+        let ui_manager = UiManager::new(config, event_bus, shutdown_flag).await.unwrap();
 
-        ui_manager.request_shutdown().await.unwrap();
+        // Test that shutdown flag is initially false
+        let shutdown = ui_manager.shutdown_flag.read().await;
+        assert!(!*shutdown);
 
         let running = ui_manager.running.read().await;
         assert!(!*running);
