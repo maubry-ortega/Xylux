@@ -1,33 +1,110 @@
 [package]
 name = "xylux-ide"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Equipo Xylux"]
 license = "Xylux-Proprietary"
 edition = "2021"
-description = "A lightweight IDE for game development with the Xylux engine, preparing for Alux scripting."
+description = "A comprehensive IDE for Rust development and Alux scripting with Xylux engine integration"
 repository = "https://github.com/xylux/xylux-ide"
 readme = "README.md"
-keywords = ["ide", "game-development", "rust", "xylux"]
-categories = ["development-tools", "game-development"]
-include = ["src/**/*", "Cargo.toml", "LICENSE.md", "README.md"]
+keywords = ["ide", "rust", "alux", "xylux", "game-development"]
+categories = ["development-tools", "game-development", "text-editors"]
+include = [
+    "src/**/*",
+    "syntax/**/*",
+    "assets/**/*",
+    "Cargo.toml",
+    "LICENSE.md",
+    "README.md",
+]
 
 [dependencies]
+# Core dependencies
 unicode-width = "0.2.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Async runtime for LSP and file operations
+tokio = { version = "1.0", features = ["full"] }
+futures = "0.3"
+async-trait = "0.1"
+
+# CLI parsing
+clap = { version = "4.5", features = ["derive"] }
+
+# Terminal and UI
+crossterm = { version = "0.28", features = ["event-stream"] }
+ratatui = "0.28"
+
+# Text processing and syntax
+tree-sitter = "0.24"
+tree-sitter-rust = "0.23"
+ropey = "1.6"
+
+# LSP support
+tower-lsp = "0.20"
+lsp-types = "0.97"
+
+# File system operations
+notify = "6.1"
+walkdir = "2.5"
+ignore = "0.4"
+
+# Process management
+which = "6.0"
+
+# Configuration and data formats
+config = "0.14"
+dirs = "5.0"
+
+# Signal handling
+signal-hook = "0.3"
+signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# HTTP client for extensions/updates
+reqwest = { version = "0.12", features = ["json"], optional = true }
+
+# Terminal clipboard
+arboard = { version = "3.4", optional = true }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.174"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3.9", default-features = false, features = ["wincon"] }
+winapi = { version = "0.3.9", default-features = false, features = [
+    "wincon",
+    "processenv",
+    "handleapi",
+] }
 winapi-util = "0.1.9"
 
 [dev-dependencies]
 tempfile = "3.20.0"
+tokio-test = "0.4"
+proptest = "1.5"
+
+[features]
+default = ["clipboard", "network"]
+clipboard = ["arboard"]
+network = ["reqwest"]
+debug = []
 
 [profile.release]
 lto = true
 strip = true
 codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+debug = true
+overflow-checks = true
 
 [lints.rust]
 explicit_outlives_requirements = "deny"
@@ -42,7 +119,7 @@ trivial-casts = "deny"
 trivial_numeric_casts = "deny"
 unit-bindings = "deny"
 unnameable-types = "deny"
-unsafe-code = "deny"
+unsafe-code = "warn"                    # Allow some unsafe for performance
 unused-import-braces = "deny"
 unused-lifetimes = "deny"
 unused-macro-rules = "deny"
@@ -59,7 +136,7 @@ cargo = { level = "deny", priority = -1 }
 suspicious = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
 unwrap_used = "deny"
-expect_used = "deny"
+expect_used = "warn"                            # Allow some expects with good messages
 panic = "deny"
 redundant_clone = "deny"
 manual_memcpy = "deny"
@@ -88,7 +165,7 @@ mem_forget = "deny"
 missing_assert_message = "deny"
 mixed_read_write_in_expression = "deny"
 mod_module_files = "deny"
-module_name_repetitions = "deny"
+module_name_repetitions = "allow"               # Common in IDE modules
 multiple_inherent_impl = "deny"
 mutex_atomic = "deny"
 needless_raw_strings = "deny"
@@ -106,3 +183,11 @@ unused_result_ok = "deny"
 use_debug = "deny"
 verbose_file_reads = "deny"
 wildcard_enum_match_arm = "deny"
+
+[[bin]]
+name = "xylux-ide"
+path = "src/main.rs"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
