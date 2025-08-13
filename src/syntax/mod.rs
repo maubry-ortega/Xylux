@@ -81,17 +81,14 @@ impl SyntaxManager {
         // Register Rust highlighter
         highlighters.insert("rs".to_string(), Box::new(RustSyntaxHighlighter::new()));
 
-        // Register Alux highlighter
-        highlighters.insert("aux".to_string(), Box::new(AluxSyntaxHighlighter::new()));
-
         // Register TOML highlighter
         highlighters.insert("toml".to_string(), Box::new(TomlSyntaxHighlighter::new()));
 
         // Register JSON highlighter
         highlighters.insert("json".to_string(), Box::new(JsonSyntaxHighlighter::new()));
 
-        // Register WGSL (shader) highlighter
-        highlighters.insert("wgsl".to_string(), Box::new(WgslSyntaxHighlighter::new()));
+        // Register Markdown highlighter
+        highlighters.insert("md".to_string(), Box::new(MarkdownSyntaxHighlighter::new()));
 
         info!("Initialized {} syntax highlighters", highlighters.len());
         Ok(())
@@ -366,10 +363,9 @@ impl SyntaxManager {
 
         match extension {
             "rs" => "rust".to_string(),
-            "aux" => "alux".to_string(),
             "toml" => "toml".to_string(),
             "json" => "json".to_string(),
-            "wgsl" => "wgsl".to_string(),
+            "md" => "markdown".to_string(),
             _ => "text".to_string(),
         }
     }
@@ -521,28 +517,58 @@ pub enum CompletionItemKind {
 
 // Basic syntax highlighter implementations
 
-pub struct RustSyntaxHighlighter;
+pub struct RustSyntaxHighlighter {
+    keywords: Vec<String>,
+}
 
 impl RustSyntaxHighlighter {
     pub fn new() -> Self {
-        Self
+        // Try to load config from assets/syntax_config.json
+        let mut keywords: Vec<String> = vec!["fn".to_string()];
+
+        let config_path = std::path::Path::new("assets").join("syntax_config.json");
+        if let Ok(content) = std::fs::read_to_string(config_path) {
+            #[derive(serde::Deserialize)]
+            struct RustCfg { keywords: Option<Vec<String>> }
+            #[derive(serde::Deserialize)]
+            struct Cfg { rust: Option<RustCfg> }
+            if let Ok(cfg) = serde_json::from_str::<Cfg>(&content) {
+                if let Some(r) = cfg.rust {
+                    if let Some(kw) = r.keywords {
+                        if !kw.is_empty() { keywords = kw; }
+                    }
+                }
+            }
+        }
+
+        Self { keywords }
     }
 }
 
 #[async_trait::async_trait]
 impl SyntaxHighlighter for RustSyntaxHighlighter {
     async fn highlight(&self, content: &str) -> Result<Vec<HighlightToken>> {
-        // Simple keyword-based highlighting for now
-        let mut tokens = Vec::new();
-        let keywords = ["fn", "let", "mut", "pub", "struct", "enum", "impl", "use", "mod"];
+        // Keyword + strings + numbers + line comments
+        let mut tokens: Vec<HighlightToken> = Vec::new();
 
-        for keyword in &keywords {
-            for (start, _) in content.match_indices(keyword) {
-                tokens.push(HighlightToken::new(start, start + keyword.len(), TokenType::Keyword));
-            }
-        }
+        // Keywords (whole word)
+        let keyword_refs: Vec<&str> = self.keywords.iter().map(|s| s.as_str()).collect();
+        let mut kw = highlighter::utils::extract_keywords(content, &keyword_refs);
+        tokens.append(&mut kw);
 
-        Ok(tokens)
+        // Strings ("..." and '...')
+        let mut str_tokens = highlighter::utils::extract_strings(content, &['"', '\'']);
+        tokens.append(&mut str_tokens);
+
+        // Numbers
+        let mut nums = highlighter::utils::extract_numbers(content);
+        tokens.append(&mut nums);
+
+        // Line comments
+        let mut comments = highlighter::utils::extract_line_comments(content, "//");
+        tokens.append(&mut comments);
+
+        Ok(highlighter::utils::merge_tokens(tokens))
     }
 }
 
@@ -603,19 +629,41 @@ impl SyntaxHighlighter for JsonSyntaxHighlighter {
     }
 }
 
-pub struct WgslSyntaxHighlighter;
+pub struct MarkdownSyntaxHighlighter;
 
-impl WgslSyntaxHighlighter {
+impl MarkdownSyntaxHighlighter {
     pub fn new() -> Self {
         Self
     }
 }
 
 #[async_trait::async_trait]
-impl SyntaxHighlighter for WgslSyntaxHighlighter {
-    async fn highlight(&self, _content: &str) -> Result<Vec<HighlightToken>> {
-        // Basic WGSL (shader) highlighting would go here
-        Ok(Vec::new())
+impl SyntaxHighlighter for MarkdownSyntaxHighlighter {
+    async fn highlight(&self, content: &str) -> Result<Vec<HighlightToken>> {
+        // Simple markdown: headings and code fences
+        let mut tokens = Vec::new();
+        for (line_idx, line) in content.lines().enumerate() {
+            let line_start: usize = content
+                .lines()
+                .take(line_idx)
+                .map(|l| l.len() + 1)
+                .sum();
+            if line.trim_start().starts_with('#') {
+                tokens.push(HighlightToken::new(
+                    line_start,
+                    line_start + line.len(),
+                    TokenType::Keyword,
+                ));
+            }
+            if line.trim_start().starts_with("```") {
+                tokens.push(HighlightToken::new(
+                    line_start,
+                    line_start + line.len(),
+                    TokenType::Punctuation,
+                ));
+            }
+        }
+        Ok(tokens)
     }
 }
 

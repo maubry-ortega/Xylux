@@ -1,0 +1,5 @@
+{
+  "rust": {
+    "keywords": ["fn", "pub","let","mut","struct","enum","impl","use","mod"]
+  }
+}

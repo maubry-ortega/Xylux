@@ -118,12 +118,12 @@ impl XyluxIdeApp {
                 self.editor_widget.set_buffer(super::FileBuffer::from_file(path.clone(), content));
                 if let Err(e) = self.rt.block_on(self.editor.open_file(&path)) {
                     self.status_message = format!("Open error: {}", e);
-                } else {
+        } else {
                     let _unused = self.rt.block_on(
                         self.syntax_manager
                             .highlight_file(&path, &self.editor_widget.get_buffer().content),
                     );
-                    self.status_message = format!("Opened: {}", path.display());
+            self.status_message = format!("Opened: {}", path.display());
                 }
             }
             Err(e) => self.status_message = format!("Read error: {}", e),
@@ -198,7 +198,7 @@ impl XyluxIdeApp {
         }
         egui::Window::new("Open File").collapsible(false).resizable(true).show(ctx, |ui| {
             ui.label("Select a file:");
-            ui.separator();
+                    ui.separator();
             egui::ScrollArea::vertical().show(ui, |ui| {
                 if let Ok(entries) = fs::read_dir(&self.current_directory) {
                     for entry in entries.flatten() {
@@ -238,30 +238,49 @@ impl eframe::App for XyluxIdeApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
 
-        egui::TopBottomPanel::top("menu").show(ctx, |ui| {
+        egui::TopBottomPanel::top("menu")
+            .frame(egui::Frame::none().fill(egui::Color32::from_rgb(50, 50, 60)))
+            .show(ctx, |ui| {
             let action = self.menu.show(ui);
             self.handle_menu_action(ctx, action);
         });
 
         if self.show_file_explorer {
-            egui::SidePanel::left("explorer").resizable(true).default_width(220.0).show(
+            egui::SidePanel::left("explorer")
+                .resizable(true)
+                .default_width(240.0)
+                .frame(egui::Frame::side_top_panel(&ctx.style()).fill(egui::Color32::from_rgb(40, 40, 48)))
+                .show(
                 ctx,
                 |ui| {
                     if let Some(path) = self.file_tree.show(ui) {
-                        self.open_file(path);
+                                        self.open_file(path);
                     }
                 },
             );
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            // Update syntax highlight tokens for Rust/TOML/JSON/MD using current buffer
+            if let Some(path) = self.editor_widget.get_buffer().path.clone() {
+                let content = self.editor_widget.get_buffer().content.clone();
+                if let Ok(tokens) = self
+                    .rt
+                    .block_on(self.syntax_manager.highlight_file(&path, &content))
+                {
+                    self.editor_widget.set_highlight_tokens(tokens);
+                }
+            }
+
             let resp = self.editor_widget.show(ui);
             if resp.changed() {
                 self.status_message = "Modified".into();
             }
         });
 
-        egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
+        egui::TopBottomPanel::bottom("status")
+            .frame(egui::Frame::none().fill(egui::Color32::from_rgb(45, 45, 55)))
+            .show(ctx, |ui| {
             self.update_status_from_buffer();
             self.status_bar.show(ui);
         });
@@ -273,9 +292,9 @@ impl eframe::App for XyluxIdeApp {
                 |ui| {
                     ui.label("Xylux IDE");
                     ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
-                    if ui.button("Close").clicked() {
-                        self.about_dialog_open = false;
-                    }
+                        if ui.button("Close").clicked() {
+                            self.about_dialog_open = false;
+                        }
                 },
             );
         }

@@ -198,31 +198,28 @@ pub mod utils {
         tokens
     }
 
-    /// Extract string literals from content.
+    /// Extract string literals from content (byte offsets).
     pub fn extract_strings(content: &str, quote_chars: &[char]) -> Vec<HighlightToken> {
         let mut tokens = Vec::new();
-        let chars: Vec<char> = content.chars().collect();
-        let mut i = 0;
+        let mut in_string: Option<char> = None;
+        let mut start_byte: usize = 0;
+        let mut prev_byte: Option<u8> = None;
 
-        while i < chars.len() {
-            let ch = chars[i];
-            if quote_chars.contains(&ch) {
-                let start = i;
-                i += 1;
-
-                // Find closing quote
-                while i < chars.len() {
-                    if chars[i] == ch && (i == 0 || chars[i - 1] != '\\') {
-                        i += 1;
-                        break;
+        for (byte_idx, ch) in content.char_indices() {
+            if let Some(quote) = in_string {
+                if ch == quote {
+                    // Check escape (previous byte not backslash)
+                    if prev_byte != Some(b'\\') {
+                        let end = byte_idx + ch.len_utf8();
+                        tokens.push(HighlightToken::new(start_byte, end, TokenType::String));
+                        in_string = None;
                     }
-                    i += 1;
                 }
-
-                tokens.push(HighlightToken::new(start, i, TokenType::String));
-            } else {
-                i += 1;
+            } else if quote_chars.contains(&ch) {
+                in_string = Some(ch);
+                start_byte = byte_idx;
             }
+            prev_byte = Some(ch as u32 as u8);
         }
 
         tokens
@@ -247,50 +244,65 @@ pub mod utils {
         tokens
     }
 
-    /// Extract numbers from content.
+    /// Extract numbers from content (byte offsets).
     pub fn extract_numbers(content: &str) -> Vec<HighlightToken> {
         let mut tokens = Vec::new();
-        let chars: Vec<char> = content.chars().collect();
-        let mut i = 0;
-
-        while i < chars.len() {
-            let ch = chars[i];
+        let mut iter = content.char_indices().peekable();
+        while let Some((start_byte, ch)) = iter.peek().cloned() {
             if is_number_start(ch) {
-                let start = i;
-
-                // Consume digits before decimal point
-                while i < chars.len() && is_digit(chars[i]) {
-                    i += 1;
-                }
-
-                // Check for decimal point
-                if i < chars.len() && chars[i] == '.' {
-                    i += 1;
-                    // Consume digits after decimal point
-                    while i < chars.len() && is_digit(chars[i]) {
-                        i += 1;
+                // advance
+                iter.next();
+                let mut end_byte = start_byte + ch.len_utf8();
+                // digits before decimal
+                while let Some(&(b, c)) = iter.peek() {
+                    if is_digit(c) {
+                        end_byte = b + c.len_utf8();
+                        iter.next();
+                    } else {
+                        break;
                     }
                 }
-
-                // Check for scientific notation
-                if i < chars.len() && (chars[i] == 'e' || chars[i] == 'E') {
-                    i += 1;
-                    if i < chars.len() && (chars[i] == '+' || chars[i] == '-') {
-                        i += 1;
-                    }
-                    while i < chars.len() && is_digit(chars[i]) {
-                        i += 1;
+                // optional decimal
+                if let Some(&(b, c)) = iter.peek() {
+                    if c == '.' {
+                        end_byte = b + c.len_utf8();
+                        iter.next();
+                        while let Some(&(b2, c2)) = iter.peek() {
+                            if is_digit(c2) {
+                                end_byte = b2 + c2.len_utf8();
+                                iter.next();
+                            } else {
+                                break;
+                            }
+                        }
                     }
                 }
-
-                if i > start {
-                    tokens.push(HighlightToken::new(start, i, TokenType::Number));
+                // optional scientific notation
+                if let Some(&(b, c)) = iter.peek() {
+                    if c == 'e' || c == 'E' {
+                        end_byte = b + c.len_utf8();
+                        iter.next();
+                        if let Some(&(b2, c2)) = iter.peek() {
+                            if c2 == '+' || c2 == '-' {
+                                end_byte = b2 + c2.len_utf8();
+                                iter.next();
+                            }
+                        }
+                        while let Some(&(b3, c3)) = iter.peek() {
+                            if is_digit(c3) {
+                                end_byte = b3 + c3.len_utf8();
+                                iter.next();
+                            } else {
+                                break;
+                            }
+                        }
+                    }
                 }
+                tokens.push(HighlightToken::new(start_byte, end_byte, TokenType::Number));
             } else {
-                i += 1;
+                iter.next();
             }
         }
-
         tokens
     }
 
