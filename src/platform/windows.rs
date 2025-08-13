@@ -4,7 +4,7 @@
 
 #![allow(clippy::wildcard_imports)]
 
-use std::{convert::TryInto, env, io};
+use std::{env, io};  // Eliminada la importación redundante de TryInto
 
 use winapi::um::wincon::*;
 use winapi_util::{HandleRef, console as cons};
@@ -125,7 +125,9 @@ impl Platform for WindowsPlatform {
     }
 
     fn set_env_var(&self, key: &str, value: &str) -> Result<()> {
-        env::set_var(key, value);
+        unsafe {
+            env::set_var(key, value);
+        }
         Ok(())
     }
 
