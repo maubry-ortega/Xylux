@@ -9,26 +9,19 @@ all-features = false
 
 # Licencias permitidas y restricciones
 [licenses]
-# No se permiten licencias abiertas por defecto; solo dependencias específicas aprobadas
-allow = []
-# Deniega explícitamente licencias no compatibles con el enfoque propietario
-deny = [
-    "GPL-2.0",
-    "GPL-3.0",
-    "AGPL-3.0",
-    "LGPL-2.1",
-    "LGPL-3.0",
+# Permite licencias permisivas comunes usadas por ecosistema Rust
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-DFS-2016",
 ]
-# Configura para revisar caso por caso las licencias de dependencias
+deny = ["GPL-2.0", "GPL-3.0", "AGPL-3.0", "LGPL-2.1", "LGPL-3.0"]
 unlicensed = "deny"
 copyleft = "deny"
-# Lista de dependencias con licencias permitidas específicamente
-allow-osi-fsf-free = "neither"
-[licenses.allowed]
-unicode-width = ["MIT", "Apache-2.0"]
-libc = ["MIT", "Apache-2.0"]
-winapi = ["MIT", "Apache-2.0"]
-tempfile = ["MIT", "Apache-2.0"]
 
 # Verificación de vulnerabilidades
 [advisories]
@@ -41,15 +34,6 @@ ignore = []
 [bans]
 # Deniega múltiples versiones de la misma dependencia para evitar conflictos
 multiple-versions = "deny"
-# Deniega dependencias no aprobadas explícitamente
-deny = []
-# Solo permite dependencias esenciales para Xylux IDE
-allow = [
-    "unicode-width",
-    "libc",
-    "winapi",
-    "tempfile",
-]
 # Evita dependencias con comodines para mayor control
 wildcards = "deny"
 

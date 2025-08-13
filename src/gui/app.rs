@@ -50,9 +50,8 @@ impl XyluxIdeApp {
         let event_bus = Arc::new(EventBus::new());
         let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
 
-        let editor = rt
-            .block_on(Editor::new(config.clone(), event_bus.clone()))
-            .expect("editor init");
+        let editor =
+            rt.block_on(Editor::new(config.clone(), event_bus.clone())).expect("editor init");
         let syntax_manager = rt
             .block_on(SyntaxManager::new(config.clone(), event_bus.clone()))
             .expect("syntax init");
@@ -122,14 +121,14 @@ impl XyluxIdeApp {
     pub fn open_file(&mut self, path: PathBuf) {
         match fs::read_to_string(&path) {
             Ok(content) => {
-                self.editor_widget
-                    .set_buffer(super::FileBuffer::from_file(path.clone(), content));
+                self.editor_widget.set_buffer(super::FileBuffer::from_file(path.clone(), content));
                 if let Err(e) = self.rt.block_on(self.editor.open_file(&path)) {
                     self.status_message = format!("Open error: {}", e);
                 } else {
-                    let _unused = self
-                        .rt
-                        .block_on(self.syntax_manager.highlight_file(&path, &self.editor_widget.get_buffer().content));
+                    let _unused = self.rt.block_on(
+                        self.syntax_manager
+                            .highlight_file(&path, &self.editor_widget.get_buffer().content),
+                    );
                     self.status_message = format!("Opened: {}", path.display());
                 }
             }
@@ -200,7 +199,9 @@ impl XyluxIdeApp {
     }
 
     fn draw_file_dialog(&mut self, ctx: &egui::Context) {
-        if !self.file_dialog_open { return; }
+        if !self.file_dialog_open {
+            return;
+        }
         egui::Window::new("Open File").collapsible(false).resizable(true).show(ctx, |ui| {
             ui.label("Select a file:");
             ui.separator();
@@ -223,7 +224,9 @@ impl XyluxIdeApp {
             });
             ui.separator();
             ui.horizontal(|ui| {
-                if ui.button("Cancel").clicked() { self.file_dialog_open = false; }
+                if ui.button("Cancel").clicked() {
+                    self.file_dialog_open = false;
+                }
                 if ui.button("Up").clicked() {
                     if let Some(parent) = self.current_directory.parent() {
                         self.current_directory = parent.to_path_buf();
@@ -247,14 +250,21 @@ impl eframe::App for XyluxIdeApp {
         });
 
         if self.show_file_explorer {
-            egui::SidePanel::left("explorer").resizable(true).default_width(220.0).show(ctx, |ui| {
-                if let Some(path) = self.file_tree.show(ui) { self.open_file(path); }
-            });
+            egui::SidePanel::left("explorer").resizable(true).default_width(220.0).show(
+                ctx,
+                |ui| {
+                    if let Some(path) = self.file_tree.show(ui) {
+                        self.open_file(path);
+                    }
+                },
+            );
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let resp = self.editor_widget.show(ui);
-            if resp.changed() { self.status_message = "Modified".into(); }
+            if resp.changed() {
+                self.status_message = "Modified".into();
+            }
         });
 
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
@@ -264,20 +274,31 @@ impl eframe::App for XyluxIdeApp {
 
         // Dialogs and tools
         if self.about_dialog_open {
-            egui::Window::new("About Xylux IDE").collapsible(false).resizable(false).show(ctx, |ui| {
-                ui.label("Xylux IDE");
-                ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
-                if ui.button("Close").clicked() { self.about_dialog_open = false; }
-            });
+            egui::Window::new("About Xylux IDE").collapsible(false).resizable(false).show(
+                ctx,
+                |ui| {
+                    ui.label("Xylux IDE");
+                    ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
+                    if ui.button("Close").clicked() {
+                        self.about_dialog_open = false;
+                    }
+                },
+            );
         }
         self.draw_file_dialog(ctx);
         self.update_tools_data();
         self.tools_window.show(ctx);
 
         // Shortcuts
-        if ctx.input(|i| i.key_pressed(egui::Key::S) && i.modifiers.ctrl) { self.save_file(); }
-        if ctx.input(|i| i.key_pressed(egui::Key::O) && i.modifiers.ctrl) { self.file_dialog_open = true; }
-        if ctx.input(|i| i.key_pressed(egui::Key::N) && i.modifiers.ctrl) { self.new_file(); }
+        if ctx.input(|i| i.key_pressed(egui::Key::S) && i.modifiers.ctrl) {
+            self.save_file();
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::O) && i.modifiers.ctrl) {
+            self.file_dialog_open = true;
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::N) && i.modifiers.ctrl) {
+            self.new_file();
+        }
 
         ctx.request_repaint_after(std::time::Duration::from_millis(250));
     }

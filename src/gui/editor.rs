@@ -8,16 +8,12 @@ use super::FileBuffer;
 pub struct EditorWidget {
     /// Current file buffer
     buffer: FileBuffer,
-    /// Font size
-    font_size: f32,
-    /// Show line numbers
-    show_line_numbers: bool,
 }
 
 impl EditorWidget {
     /// Create a new editor widget
     pub fn new() -> Self {
-        Self { buffer: FileBuffer::new(), font_size: 14.0, show_line_numbers: true }
+        Self { buffer: FileBuffer::new() }
     }
 
     /// Set the current buffer

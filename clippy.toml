@@ -8,29 +8,8 @@ allow-expect-in-tests = true
 allow-panic-in-tests = true
 allow-unwrap-in-tests = true
 
-# Lints para código de producción (Xylux IDE, motor Xylux, Alux bindings)
-# Denegar prácticas inseguras o ineficientes en producción
-deny = [
-    "unwrap_used",           # Prohíbe unwrap en producción (usa match o unwrap_or)
-    "expect_used",           # Prohíbe expect en producción (usa Result handling)
-    "panic",                 # Prohíbe panic! en producción (usa error handling)
-    "unnecessary_operation", # Evita operaciones redundantes (e.g., copias innecesarias)
-    "redundant_clone",       # Evita clones innecesarios, crítico para bindings Alux-Rust
-    "manual_memcpy",         # Evita copias manuales, optimiza para ECS y VM
-    "cast_lossless",         # Previene conversiones que pierden precisión (e.g., float a int)
-    "float_cmp",             # Evita comparaciones directas de floats, usa epsilon (relevante para vec3, mat4)
-]
+## Nota: clippy.toml no soporta listas de deny/warn por nombre de lint.
+## Usamos niveles desde Cargo.toml y banderas en CI. Aquí dejamos solo opciones válidas.
 
-# Advertencias para mejorar legibilidad y mantenimiento
-warn = [
-    "complexity",            # Advierte sobre código demasiado complejo
-    "perf",                 # Advierte sobre problemas de rendimiento (e.g., bucles ineficientes)
-    "style",                # Advierte sobre estilo no idiomático
-    "missing_docs",         # Exige documentación en funciones públicas
-    "unused_crate_dependencies", # Advierte sobre dependencias no usadas
-]
-
-# Configuraciones específicas para Xylux
+# Reglas específicas
 msrv = "1.80.0"             # Versión mínima de Rust, alineada con el README
-allow-private-module-in-public-interface = false  # Evita módulos privados en APIs públicas
-avoid-breaking-exported-api = true  # Previene cambios que rompan la API pública

@@ -3,26 +3,12 @@
 //! Menu bar and context menu components for the GUI interface
 
 /// Menu bar widget for the main application
-pub struct MenuBarWidget {
-    /// Whether file menu is open
-    file_menu_open: bool,
-    /// Whether edit menu is open
-    edit_menu_open: bool,
-    /// Whether view menu is open
-    view_menu_open: bool,
-    /// Whether help menu is open
-    help_menu_open: bool,
-}
+pub struct MenuBarWidget;
 
 impl MenuBarWidget {
     /// Create a new menu bar widget
     pub fn new() -> Self {
-        Self {
-            file_menu_open: false,
-            edit_menu_open: false,
-            view_menu_open: false,
-            help_menu_open: false,
-        }
+        Self
     }
 
     /// Draw the menu bar
