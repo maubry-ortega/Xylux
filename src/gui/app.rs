@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::{IdTheme, ToolsWindow};
+use super::ToolsWindow;
 use crate::core::{Config, EventBus};
 use crate::editor::Editor;
 use crate::project::ProjectManager;
@@ -20,14 +20,11 @@ use crate::gui::statusbar::{StatusBarWidget, StatusInfo};
 
 /// Main Xylux IDE application (GUI-only)
 pub struct XyluxIdeApp {
-    config: Arc<RwLock<Config>>,
-    event_bus: Arc<EventBus>,
     editor: Editor,
     syntax_manager: SyntaxManager,
     project_manager: ProjectManager,
     rt: tokio::runtime::Runtime,
 
-    theme: IdTheme,
     show_file_explorer: bool,
     current_directory: PathBuf,
     status_message: String,
@@ -58,13 +55,10 @@ impl XyluxIdeApp {
         let project_manager = ProjectManager::new(config.clone(), event_bus.clone());
 
         Self {
-            config,
-            event_bus,
             editor,
             syntax_manager,
             project_manager,
             rt,
-            theme: IdTheme::default(),
             show_file_explorer: true,
             current_directory: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             status_message: "Ready".into(),
