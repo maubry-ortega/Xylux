@@ -49,14 +49,8 @@ pub use crate::core::{
     Result, VERSION, XyluxError, initialize, shutdown,
 };
 
-// Re-export main IDE structure
-pub use crate::ide::XyluxIde;
-
 // Core modules
 pub mod core;
-
-// Main IDE implementation
-mod ide;
 
 // Feature modules
 pub mod build;
@@ -65,7 +59,6 @@ pub mod gui;
 pub mod platform;
 pub mod project;
 pub mod syntax;
-pub mod ui;
 
 // Conditional compilation for different platforms
 #[cfg(unix)]
@@ -81,13 +74,11 @@ pub use platform::wasi;
 pub mod prelude {
     //! Common imports for Xylux IDE development.
 
-    pub use crate::XyluxIde;
     pub use crate::core::{
         Config, Event, EventBus, EventHandler, EventMessage, EventPriority, Result, XyluxError,
     };
     pub use crate::editor::{Buffer, Cursor, Editor};
     pub use crate::project::{Project, ProjectManager, ProjectType};
-    pub use crate::ui::{Component, Layout, Theme, UiManager};
 
     // Common async traits
     pub use async_trait::async_trait;

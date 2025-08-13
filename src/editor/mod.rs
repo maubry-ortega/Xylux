@@ -6,13 +6,11 @@ pub mod buffer;
 pub mod commands;
 pub mod cursor;
 pub mod selection;
-pub mod simple;
 
 pub use buffer::Buffer;
 pub use commands::Command;
 pub use cursor::Cursor;
 pub use selection::Selection;
-pub use simple::SimpleEditor;
 
 use std::collections::HashMap;
 use std::path::PathBuf;

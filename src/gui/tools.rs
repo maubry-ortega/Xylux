@@ -751,4 +751,89 @@ impl ToolsWindow {
             dependencies: vec!["core".to_string(), "math".to_string()],
         };
     }
+
+    /// Update Rust tools with real project data
+    pub fn update_rust_tools_from_project(
+        &mut self,
+        project: Option<&crate::project::Project>,
+        _active_file: &PathBuf,
+        open_files: &[PathBuf],
+    ) {
+        if let Some(proj) = project {
+            // Update with real project data
+            self.rust_tools.cargo_info = CargoInfo {
+                project_name: proj.name.clone(),
+                version: "0.1.0".to_string(), // TODO: Parse from Cargo.toml
+                authors: vec!["Project Author".to_string()],
+                edition: "2021".to_string(),
+                features: vec!["default".to_string()],
+                manifest_path: proj.config_path.clone(),
+            };
+
+            // Update build targets from open files
+            self.rust_tools.build_targets = open_files
+                .iter()
+                .filter(|path| path.extension().and_then(|e| e.to_str()) == Some("rs"))
+                .map(|path| BuildTarget {
+                    name: path.file_stem().unwrap_or_default().to_string_lossy().to_string(),
+                    target_type: if path.file_name().unwrap_or_default() == "main.rs" {
+                        BuildTargetType::Binary
+                    } else if path.file_name().unwrap_or_default() == "lib.rs" {
+                        BuildTargetType::Library
+                    } else {
+                        BuildTargetType::Binary
+                    },
+                    path: path.clone(),
+                    features: vec![],
+                })
+                .collect();
+        } else {
+            // Fallback to mock data
+            self.update_rust_tools();
+        }
+    }
+
+    /// Update Alux tools with real project data
+    pub fn update_alux_tools_from_project(
+        &mut self,
+        project: Option<&crate::project::Project>,
+        _active_file: &PathBuf,
+        open_files: &[PathBuf],
+    ) {
+        if let Some(proj) = project {
+            // Update with real project data
+            self.alux_tools.script_info = AluxScriptInfo {
+                script_name: proj.name.clone(),
+                version: "1.0.0".to_string(),
+                author: "Project Author".to_string(),
+                description: "Alux script project".to_string(),
+                entry_point: open_files
+                    .iter()
+                    .find(|path| {
+                        path.file_name().unwrap_or_default().to_string_lossy().contains("main")
+                            && path.extension().and_then(|e| e.to_str()) == Some("alux")
+                    })
+                    .cloned(),
+                dependencies: vec!["core".to_string(), "math".to_string()],
+            };
+
+            // Update modules from open files
+            self.alux_tools.modules = open_files
+                .iter()
+                .filter(|path| {
+                    matches!(path.extension().and_then(|e| e.to_str()), Some("alux") | Some("alx"))
+                })
+                .map(|path| AluxModule {
+                    name: path.file_stem().unwrap_or_default().to_string_lossy().to_string(),
+                    path: path.clone(),
+                    exports: vec!["main".to_string(), "init".to_string()], // TODO: Parse from file
+                    imports: vec!["core".to_string(), "math".to_string()], // TODO: Parse from file
+                    line_count: 100, // TODO: Count actual lines
+                })
+                .collect();
+        } else {
+            // Fallback to mock data
+            self.update_alux_tools();
+        }
+    }
 }

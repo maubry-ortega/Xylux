@@ -17,7 +17,7 @@ use crate::core::{
 use crate::editor::Editor;
 use crate::project::ProjectManager;
 use crate::syntax::SyntaxManager;
-use crate::ui::UiManager;
+// UI Manager removed (TUI). This file remains for potential future headless coordination.
 
 /// Main IDE application structure.
 #[derive(Clone)]

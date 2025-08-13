@@ -41,10 +41,6 @@ eframe = "0.28"
 egui = "0.28"
 egui_extras = { version = "0.28", features = ["syntect"] }
 
-# Terminal and UI (kept for backwards compatibility)
-crossterm = { version = "0.28", features = ["event-stream"] }
-ratatui = "0.28"
-
 # Text processing and syntax
 tree-sitter = "0.24"
 tree-sitter-rust = "0.23"
@@ -80,7 +76,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # HTTP client for extensions/updates
 reqwest = { version = "0.12", features = ["json"], optional = true }
 
-# Terminal clipboard
+# Clipboard (used by GUI)
 arboard = { version = "3.4", optional = true }
 
 [target.'cfg(unix)'.dependencies]
